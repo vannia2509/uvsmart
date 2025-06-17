@@ -39,10 +39,14 @@ App = {
       instance.votedEvent({}, {
         fromBlock: 0,
         toBlock: 'latest'
-      }).on('data', function (event) {
-        console.log("event triggered", event);
-        App.render();
-      }).on('error', console.error);
+      }).watch(function (error, event) {
+        if (!error) {
+          console.log("event triggered", event);
+          App.render();
+        } else {
+          console.error(error);
+        }
+      });
     });
   },
 
@@ -54,43 +58,48 @@ App = {
     loader.show();
     content.hide();
 
-    web3.eth.getAccounts().then(function (accounts) {
-      App.account = accounts[0];
-      $("#accountAddress").html("Your Account: " + App.account);
-    });
+    web3.eth.getAccounts(function (err, accounts) {
+      if (err === null) {
+        App.account = accounts[0];
+        $("#accountAddress").html("Your Account: " + App.account);
 
-    App.contracts.Election.deployed().then(function (instance) {
-      electionInstance = instance;
-      return electionInstance.candidatesCount();
-    }).then(function (candidatesCount) {
-      var candidatesResults = $("#candidatesResults");
-      candidatesResults.empty();
+        App.contracts.Election.deployed().then(function (instance) {
+          electionInstance = instance;
+          return electionInstance.candidatesCount();
+        }).then(function (candidatesCount) {
+          var candidatesResults = $("#candidatesResults");
+          candidatesResults.empty();
 
-      var candidatesSelect = $('#candidatesSelect');
-      candidatesSelect.empty();
+          var candidatesSelect = $('#candidatesSelect');
+          candidatesSelect.empty();
 
-      for (var i = 1; i <= candidatesCount; i++) {
-        electionInstance.candidates(i).then(function (candidate) {
-          var id = candidate[0];
-          var name = candidate[1];
-          var voteCount = candidate[2];
+          for (var i = 1; i <= candidatesCount; i++) {
+            electionInstance.candidates(i).then(function (candidate) {
+              var id = candidate[0];
+              var name = candidate[1];
+              var voteCount = candidate[2];
 
-          var candidateTemplate = "<tr><th>" + id + "</th><td>" + name + "</td><td>" + voteCount + "</td></tr>";
-          candidatesResults.append(candidateTemplate);
+              var candidateTemplate = "<tr><th>" + id + "</th><td>" + name + "</td><td>" + voteCount + "</td></tr>";
+              candidatesResults.append(candidateTemplate);
 
-          var candidateOption = "<option value='" + id + "'>" + name + "</option>";
-          candidatesSelect.append(candidateOption);
+              var candidateOption = "<option value='" + id + "'>" + name + "</option>";
+              candidatesSelect.append(candidateOption);
+            });
+          }
+
+          return electionInstance.voters(App.account);
+        }).then(function (hasVoted) {
+          if (hasVoted) {
+            $('form').hide();
+          }
+          loader.hide();
+          content.show();
+        }).catch(function (error) {
+          console.warn(error);
         });
+      } else {
+        console.error("Error al obtener cuentas:", err);
       }
-      return electionInstance.voters(App.account);
-    }).then(function (hasVoted) {
-      if (hasVoted) {
-        $('form').hide();
-      }
-      loader.hide();
-      content.show();
-    }).catch(function (error) {
-      console.warn(error);
     });
   },
 

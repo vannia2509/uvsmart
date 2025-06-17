@@ -11,7 +11,6 @@ contract Election {
     // Store accounts that have voted
     mapping(address => bool) public voters;
     // Store Candidates
-    // Fetch Candidate
     mapping(uint => Candidate) public candidates;
     // Store Candidates Count
     uint public candidatesCount;
@@ -45,6 +44,6 @@ contract Election {
         candidates[_candidateId].voteCount ++;
 
         // trigger voted event
-        votedEvent(_candidateId);
+        emit votedEvent(_candidateId); // <--- aquí estaba el problema
     }
 }
